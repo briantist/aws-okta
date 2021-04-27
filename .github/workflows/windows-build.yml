@@ -1,3 +1,4 @@
+name: Windows-Build
 on:
   release:
     types:
@@ -13,6 +14,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Initialize tag via push
+        if: github.event_name != 'workflow_dispatch'
+        run: echo "VER_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+      - name: Initialize tag via manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "VER_TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -24,11 +33,22 @@ jobs:
       - name: build
         run: make windows
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: aws-okta.exe
-          asset_name: windows-amd64
-          tag: ${{ github.ref }}
-          overwrite: true
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: aws-okta.exe
+          asset_name: aws-okta.exe
+          # asset_content_type: application/gzip
+          asset_content_type: application/vnd.microsoft.portable-executable
+
+      # - name: Upload binaries to release
+      #   uses: svenstaro/upload-release-action@v2
+      #   with:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     file: aws-okta.exe
+      #     asset_name: windows-amd64
+      #     tag: ${{ env }}
+      #     overwrite: true
